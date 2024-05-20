@@ -5,6 +5,11 @@ import sys
 
 """
 pyvista.UnstructuredGridから隣接行列を計算。
+Input : usgrid -> <pyvista.UnstructuredGrid>
+Output : A -> <2, node_num> COO形式の隣接行列。
+
+Note:
+    Aは対称行列。つまり無向グラフを仮定。
 """
 def get_AdjacencyMatrix(usgrid):
     def read_9(cells):
