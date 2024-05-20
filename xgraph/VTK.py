@@ -1,59 +1,36 @@
 import numpy as np
 import xgraph
+import pyvista
+import sys
 
-class UnstructuredGrid(xgraph.coreVTK):
-    def __init__(self,
-                 name : str = "unstructured_grid",
-                 node_pos : np.ndarray = None,
-                 cells_info = None,
-                 ):
-        super().__init__(name, node_pos)
-        self.cells_info = [] if cells_info is None else cells_info #<list:dict> dict -> {"type":int, "node_id":list:(n, )}
-    
-    @property
-    def data_type(self):
-        return "UNSTRUCTURED_GRID"
-    @property
-    def num_cell(self):
-        return len(self.cells_info)
-    @property
-    def size_cell(self):
-        size = 0
-        for cell in self.cells_info:
-            size += 1 + len(cell["node_id"])
-        return size
-    
-    def write_geo(self, file):
-        file.write("POINTS {0} float\n".format(self.num_node))
-        for pos in self.node_pos:
-            file.write("{0} {1} {2}\n".format(pos[0], pos[1], pos[2]))
+"""
+pyvista.UnstructuredGridから隣接行列を計算。
+"""
+def get_AdjacencyMatrix(usgrid):
+    def read_9(cells):
+        node_start = []
+        node_end = []
+        for cell in cells:
+            node_start.append(cell)
+            node_end.append(np.roll(cell, -1))
+            node_start.append(np.roll(cell, -1))
+            node_end.append(cell)
+        node_start = np.concatenate(node_start)
+        node_end = np.concatenate(node_end)
 
-        cells_string = []
-        cells_type_string = []
-        for cell in self.cells_info:
-            s = str(len(cell["node_id"]))
-            for i in range(len(cell["node_id"])):
-                s += " {0}".format(cell["node_id"][i])
-            cells_string.append(s+"\n")
-            cells_type_string.append("{0}\n".format(cell["type"]))
-        file.write("CELLS {0} {1}\n".format(self.num_cell, self.size_cell))
-        for cell_string in cells_string:
-            file.write(cell_string)
-        file.write("CELL_TYPES {0}\n".format(self.num_cell))
-        for cell_type_string in cells_type_string:
-            file.write(cell_type_string)
+        edge_index = np.stack((node_start, node_end), axis = 0)
+        edge_index = np.unique(edge_index, axis = 1)
 
+        return edge_index
 
-class PointCloud(UnstructuredGrid):
-    def __init__(self, name : str = "point_cloud", node_pos : np.ndarray = None):
-        super().__init__(name, node_pos)
-        self.cells_info = [{"type" : 1, "node_id" : [i+1]} for i in range(self.num_node)]
+    cells_dict = usgrid.cells_dict
+    A = []
+    for t, cells in cells_dict.items():
+        if t == 9:
+            A.append(read_9(cells))
+        else:
+            print("t = {}".format(t))
+            raise NotImplementedError
+    A = np.concatenate(A, axis = 1).astype(np.int)
 
-class Graph(UnstructuredGrid):
-    def __init__(self, 
-                 name : str = "point_cloud", 
-                 node_pos : np.ndarray = None, 
-                 edge_index : np.ndarray = None, #<np:int:(2, edge_num)> COO format
-                 ):
-        super().__init__(name, node_pos)
-        self.cells_info = [{"type" : 3, "node_id" : [ei[0], ei[1]]} for ei in edge_index.T]
+    return A
