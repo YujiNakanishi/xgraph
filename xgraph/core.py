@@ -1,9 +1,11 @@
 import numpy as np
 from xgraph import MSH
 
-class msh:
-    def __init__(self):
-        pass
-    def read(self, filename):
-        with open(filename, "r") as file:
-            MSH.read(self, file)
+class stl:
+    def __init__(self, facet_normal = None, triangles = None, name = None):
+        self.facet_normal = facet_normal
+        self.triangles = triangles
+        self.name = name
+
+    def __len__(self):
+        return len(self.facet_normal)
