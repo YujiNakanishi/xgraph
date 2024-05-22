@@ -9,3 +9,9 @@ class stl:
 
     def __len__(self):
         return len(self.facet_normal)
+
+
+class mesh3:
+    def __init__(self, nodes = None, triangles = None):
+        self.nodes = nodes
+        self.triangles = triangles
